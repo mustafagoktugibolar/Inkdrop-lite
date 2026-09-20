@@ -21,7 +21,6 @@ const msal = new PublicClientApplication({
     clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
     redirectUri,
-    postLogoutRedirectUri: window.location.origin,
   },
   cache: {
     cacheLocation: BrowserCacheLocation.LocalStorage,
@@ -33,6 +32,9 @@ let initialization: Promise<void> | undefined
 export function initializeAuth(): Promise<void> {
   initialization ??= (async () => {
     await msal.initialize()
+    // Clears any interaction-in-progress flag left by a redirect flow (e.g. an earlier logoutRedirect);
+    // otherwise loginPopup fails with interaction_in_progress.
+    await msal.handleRedirectPromise()
 
     const accounts = msal.getAllAccounts()
     if (!msal.getActiveAccount() && accounts.length > 0) {
@@ -64,10 +66,9 @@ export async function signOut(): Promise<void> {
     return
   }
 
-  await msal.logoutPopup({
-    account,
-    postLogoutRedirectUri: window.location.origin,
-  })
+  // Sign out of this app only: clear MSAL's local cache. The user's Microsoft/Entra session in the
+  // browser is left alone (logout*() would also end it and sign them out of e.g. the Azure portal).
+  await msal.clearCache({ account })
 }
 
 export function getCurrentAccount(): AccountInfo | null {
