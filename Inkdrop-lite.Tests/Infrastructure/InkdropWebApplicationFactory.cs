@@ -1,3 +1,4 @@
+using Inkdrop_lite.Features.Mcp.OAuth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,15 +13,23 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
         Path.GetTempPath(),
         $"inkdrop-tests-{Guid.NewGuid():N}.db");
 
+    public const string McpScope = "mcp_access";
+
+    public StubEntraHandler EntraStub { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+
+        // Program.cs reads the connection string while building the host, before
+        // ConfigureAppConfiguration callbacks run, so it must be a host setting.
+        builder.UseSetting("ConnectionStrings:Inkdrop-lite", $"Data Source={_databasePath}");
+        builder.UseSetting("AzureAd:McpScope", McpScope);
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:Inkdrop-lite"] = $"Data Source={_databasePath}",
                 ["AzureAd:Scopes"] = "access_as_user",
                 ["Cors:AllowedOrigins:0"] = "http://localhost:52364"
             });
@@ -28,6 +37,10 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
 
         builder.ConfigureServices(services =>
         {
+            services
+                .AddHttpClient(McpOAuthEndpoints.EntraHttpClient)
+                .ConfigurePrimaryHttpMessageHandler(() => EntraStub);
+
             services
                 .AddAuthentication(options =>
                 {

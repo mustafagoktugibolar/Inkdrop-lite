@@ -13,10 +13,10 @@ public sealed class RequestValidationTests
     public void Note_request_rejects_invalid_title_and_status()
     {
         var request = new CreateNoteRequest(
-            new string('x', 201),
+            new string('x', 257),
             "Content",
             (NoteStatus)999,
-            null);
+            Guid.NewGuid());
 
         var errors = Validate(request);
 
@@ -36,8 +36,8 @@ public sealed class RequestValidationTests
 
         Assert.NotNull(createAttribute);
         Assert.NotNull(updateAttribute);
-        Assert.Equal(10_000_000, createAttribute.Length);
-        Assert.Equal(10_000_000, updateAttribute.Length);
+        Assert.Equal(1_048_576, createAttribute.Length);
+        Assert.Equal(1_048_576, updateAttribute.Length);
     }
 
     [Theory]
@@ -45,7 +45,7 @@ public sealed class RequestValidationTests
     [InlineData(null)]
     public void Notebook_name_is_required(string? name)
     {
-        var errors = Validate(new CreateNotebookRequest(name!, null));
+        var errors = Validate(new CreateNotebookRequest(name!));
 
         Assert.Contains(errors, error => error.MemberNames.Contains("Name"));
     }

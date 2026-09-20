@@ -7,7 +7,11 @@ public sealed record NoteResponse(
     string Title,
     string Content,
     NoteStatus Status,
-    Guid? NotebookId,
+    bool Pinned,
+    Guid NotebookId,
+    Guid? SourceTemplateId,
     IReadOnlyList<Guid> TagIds,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string CreatedSource,
+    string UpdatedSource);

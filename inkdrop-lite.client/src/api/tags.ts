@@ -1,12 +1,20 @@
 import { apiRequest } from './client'
 
+export type TagColor =
+  | 'Default' | 'Red' | 'Orange' | 'Yellow' | 'Olive' | 'Green' | 'Teal'
+  | 'Blue' | 'Violet' | 'Purple' | 'Pink' | 'Brown' | 'Grey' | 'Black'
+
 export interface TagResponse {
   id: string
   name: string
+  color: TagColor
+  createdAt: string
+  updatedAt: string
 }
 
 export interface SaveTagRequest {
   name: string
+  color: TagColor
 }
 
 export const tagsApi = {

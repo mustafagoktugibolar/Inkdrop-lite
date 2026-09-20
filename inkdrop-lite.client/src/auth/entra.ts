@@ -49,6 +49,7 @@ export async function signIn(): Promise<AccountInfo> {
   const response = await msal.loginPopup({
     scopes: [apiScope],
     redirectUri,
+    prompt: 'select_account',
   })
 
   msal.setActiveAccount(response.account)

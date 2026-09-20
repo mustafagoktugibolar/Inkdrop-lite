@@ -20,6 +20,20 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         _factory = factory;
     }
 
+    private static async Task<NotebookResponse> CreateNotebookAsync(
+        HttpClient client,
+        string? name = null)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/notebooks",
+            new CreateNotebookRequest(name ?? $"Notebook-{Guid.NewGuid():N}"[..20]),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var notebook = await response.Content.ReadFromJsonAsync<NotebookResponse>(
+            CancellationToken.None);
+        return notebook!;
+    }
+
     [Fact]
     public async Task Liveness_endpoint_allows_anonymous_requests()
     {
@@ -89,6 +103,7 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
     {
         using var client = _factory.CreateAuthenticatedClient();
         var title = $"Note-{Guid.NewGuid():N}";
+        var notebook = await CreateNotebookAsync(client);
         var tagCreateResponse = await client.PostAsJsonAsync(
             "/api/tags",
             new CreateTagRequest($"NoteTag-{Guid.NewGuid():N}"),
@@ -99,7 +114,7 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
 
         var createResponse = await client.PostAsJsonAsync(
             "/api/notes",
-            new CreateNoteRequest(title, "# Created", NoteStatus.Active, null, [tag.Id]),
+            new CreateNoteRequest(title, "# Created", NoteStatus.Active, notebook.Id, [tag.Id]),
             CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
@@ -113,7 +128,7 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/notes/{created.Id}",
-            new UpdateNoteRequest(title, "# Updated", NoteStatus.Completed, null, []),
+            new UpdateNoteRequest(title, "# Updated", NoteStatus.Completed, notebook.Id, []),
             CancellationToken.None);
         Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
 
@@ -124,6 +139,8 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.Equal("# Updated", updated.Content);
         Assert.Equal(NoteStatus.Completed, updated.Status);
         Assert.Empty(updated.TagIds);
+        Assert.Equal(DateTimeKind.Utc, updated.CreatedAt.Kind);
+        Assert.Equal(DateTimeKind.Utc, updated.UpdatedAt.Kind);
 
         var restoreTagResponse = await client.PutAsJsonAsync(
             $"/api/notes/{created.Id}",
@@ -131,7 +148,7 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
                 title,
                 "# Updated",
                 NoteStatus.Completed,
-                null,
+                notebook.Id,
                 [tag.Id]),
             CancellationToken.None);
         Assert.Equal(HttpStatusCode.NoContent, restoreTagResponse.StatusCode);
@@ -151,33 +168,58 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
 
         using var scope = _factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var deletedNote = await database.Notes
+        Assert.False(await database.Notes
             .IgnoreQueryFilters()
-            .SingleAsync(note => note.Id == created.Id);
-        var deletedNoteTag = await database.NoteTags
-            .IgnoreQueryFilters()
-            .SingleAsync(noteTag =>
-                noteTag.NoteId == created.Id && noteTag.TagId == tag.Id);
-        Assert.True(deletedNote.IsDeleted);
-        Assert.NotNull(deletedNote.DeletedAt);
-        Assert.True(deletedNoteTag.IsDeleted);
+            .AnyAsync(note => note.Id == created.Id));
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await client.GetAsync($"/api/tags/{tag.Id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Note_with_unknown_notebook_is_rejected()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/notes",
+            new CreateNoteRequest("Orphan", string.Empty, NoteStatus.None, Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Untitled_note_can_be_deleted()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var notebook = await CreateNotebookAsync(client);
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/notes",
+            new CreateNoteRequest("Untitled", string.Empty, NoteStatus.Active, notebook.Id),
+            CancellationToken.None);
+        var created = await createResponse.Content.ReadFromJsonAsync<NoteResponse>(
+            CancellationToken.None);
+        Assert.NotNull(created);
+
+        var deleteResponse = await client.DeleteAsync(
+            $"/api/notes/{created.Id}",
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await client.GetAsync($"/api/notes/{created.Id}")).StatusCode);
     }
 
     [Fact]
     public async Task Notebooks_endpoints_complete_the_full_crud_flow()
     {
         using var client = _factory.CreateAuthenticatedClient();
-        var name = $"Notebook-{Guid.NewGuid():N}";
+        var name = $"Notebook-{Guid.NewGuid():N}"[..20];
 
-        var createResponse = await client.PostAsJsonAsync(
-            "/api/notebooks",
-            new CreateNotebookRequest(name, "Created"),
-            CancellationToken.None);
-
-        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-        var created = await createResponse.Content.ReadFromJsonAsync<NotebookResponse>(
-            CancellationToken.None);
-        Assert.NotNull(created);
+        var created = await CreateNotebookAsync(client, name);
+        Assert.Equal(DateTimeKind.Utc, created.CreatedAt.Kind);
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -185,7 +227,7 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/notebooks/{created.Id}",
-            new UpdateNotebookRequest($"{name}-updated", "Updated"),
+            new UpdateNotebookRequest($"{name}-2", order: 3),
             CancellationToken.None);
         Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
 
@@ -193,15 +235,30 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
             $"/api/notebooks/{created.Id}",
             CancellationToken.None);
         Assert.NotNull(updated);
-        Assert.Equal("Updated", updated.Description);
+        Assert.Equal(3, updated.Order);
+
+        var child = await client.PostAsJsonAsync(
+            "/api/notebooks",
+            new CreateNotebookRequest("Child", created.Id),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.Created, child.StatusCode);
+        var childBody = await child.Content.ReadFromJsonAsync<NotebookResponse>(
+            CancellationToken.None);
+        Assert.NotNull(childBody);
+
+        var cycle = await client.PutAsJsonAsync(
+            $"/api/notebooks/{created.Id}",
+            new UpdateNotebookRequest(name, childBody.Id),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.BadRequest, cycle.StatusCode);
 
         var linkedNoteResponse = await client.PostAsJsonAsync(
             "/api/notes",
             new CreateNoteRequest(
                 $"Linked-{Guid.NewGuid():N}",
-                "Deleted with its notebook",
+                "Blocks notebook deletion",
                 NoteStatus.Active,
-                created.Id),
+                childBody.Id),
             CancellationToken.None);
         Assert.Equal(HttpStatusCode.Created, linkedNoteResponse.StatusCode);
         var linkedNote = await linkedNoteResponse.Content.ReadFromJsonAsync<NoteResponse>(
@@ -209,25 +266,24 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.NotNull(linkedNote);
 
         Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await client.DeleteAsync($"/api/notebooks/{created.Id}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await client.DeleteAsync($"/api/notebooks/{childBody.Id}")).StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await client.DeleteAsync($"/api/notes/{linkedNote.Id}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await client.DeleteAsync($"/api/notebooks/{childBody.Id}")).StatusCode);
+        Assert.Equal(
             HttpStatusCode.NoContent,
             (await client.DeleteAsync($"/api/notebooks/{created.Id}")).StatusCode);
         Assert.Equal(
             HttpStatusCode.NotFound,
             (await client.GetAsync($"/api/notebooks/{created.Id}")).StatusCode);
-        Assert.Equal(
-            HttpStatusCode.NotFound,
-            (await client.GetAsync($"/api/notes/{linkedNote.Id}")).StatusCode);
-
-        using var scope = _factory.Services.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var deletedNotebook = await database.Notebooks
-            .IgnoreQueryFilters()
-            .SingleAsync(notebook => notebook.Id == created.Id);
-        var deletedLinkedNote = await database.Notes
-            .IgnoreQueryFilters()
-            .SingleAsync(note => note.Id == linkedNote.Id);
-        Assert.True(deletedNotebook.IsDeleted);
-        Assert.True(deletedLinkedNote.IsDeleted);
     }
 
     [Fact]

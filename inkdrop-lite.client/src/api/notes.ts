@@ -1,10 +1,11 @@
 import { apiRequest } from './client'
 
 export enum NoteStatus {
-  Active,
-  OnHold,
-  Completed,
-  Dropped,
+  None = 'None',
+  Active = 'Active',
+  OnHold = 'OnHold',
+  Completed = 'Completed',
+  Dropped = 'Dropped',
 }
 
 export interface NoteResponse {
@@ -12,17 +13,23 @@ export interface NoteResponse {
   title: string
   content: string
   status: NoteStatus
-  notebookId: string | null
+  pinned: boolean
+  notebookId: string
+  sourceTemplateId: string | null
   tagIds: string[]
   createdAt: string
   updatedAt: string
+  /** 'app' for the web UI, 'mcp:{client}/{version}' for agents. */
+  createdSource: string
+  updatedSource: string
 }
 
 export interface SaveNoteRequest {
   title: string
   content: string
   status: NoteStatus
-  notebookId: string | null
+  pinned: boolean
+  notebookId: string
   tagIds: string[]
 }
 

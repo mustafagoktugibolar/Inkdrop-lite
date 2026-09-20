@@ -13,7 +13,12 @@ public sealed class TagService(AppDbContext context) : ITagService
         return await context.Tags
             .AsNoTracking()
             .OrderBy(tag => tag.Name)
-            .Select(tag => new TagResponse(tag.Id, tag.Name))
+            .Select(tag => new TagResponse(
+                tag.Id,
+                tag.Name,
+                tag.Color,
+                tag.CreatedAt,
+                tag.UpdatedAt))
             .ToListAsync(cancellationToken);
     }
 
@@ -24,7 +29,12 @@ public sealed class TagService(AppDbContext context) : ITagService
         return await context.Tags
             .AsNoTracking()
             .Where(tag => tag.Id == id)
-            .Select(tag => new TagResponse(tag.Id, tag.Name))
+            .Select(tag => new TagResponse(
+                tag.Id,
+                tag.Name,
+                tag.Color,
+                tag.CreatedAt,
+                tag.UpdatedAt))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -34,7 +44,8 @@ public sealed class TagService(AppDbContext context) : ITagService
     {
         var tag = new Tag
         {
-            Name = request.Name
+            Name = request.Name,
+            Color = request.Color
         };
 
         context.Tags.Add(tag);
@@ -57,6 +68,7 @@ public sealed class TagService(AppDbContext context) : ITagService
         }
 
         tag.Name = request.Name;
+        tag.Color = request.Color;
 
         await context.SaveChangesAsync(cancellationToken);
         return true;
@@ -65,7 +77,6 @@ public sealed class TagService(AppDbContext context) : ITagService
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var tag = await context.Tags
-            .Include(tag => tag.NoteTags)
             .FirstOrDefaultAsync(tag => tag.Id == id, cancellationToken);
 
         if (tag is null)
@@ -73,11 +84,12 @@ public sealed class TagService(AppDbContext context) : ITagService
             return false;
         }
 
-        context.NoteTags.RemoveRange(tag.NoteTags);
+        // NoteTags rows are removed by ON DELETE CASCADE; notes are untouched.
         context.Tags.Remove(tag);
         await context.SaveChangesAsync(cancellationToken);
         return true;
     }
 
-    private static TagResponse ToResponse(Tag tag) => new(tag.Id, tag.Name);
+    private static TagResponse ToResponse(Tag tag) =>
+        new(tag.Id, tag.Name, tag.Color, tag.CreatedAt, tag.UpdatedAt);
 }

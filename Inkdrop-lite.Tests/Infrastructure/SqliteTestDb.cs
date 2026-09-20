@@ -1,5 +1,6 @@
 using Inkdrop_lite.Authorization;
 using Inkdrop_lite.Data;
+using InkdropLite.Api.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,14 @@ internal sealed class SqliteTestDb : IAsyncDisposable
     }
 
     public AppDbContext Context { get; }
+
+    public async Task<Notebook> AddNotebookAsync(string name = "Inbox")
+    {
+        var notebook = new Notebook { Name = name };
+        Context.Notebooks.Add(notebook);
+        await Context.SaveChangesAsync();
+        return notebook;
+    }
 
     public static async Task<SqliteTestDb> CreateAsync()
     {

@@ -1,7 +1,14 @@
+using InkdropLite.Api.Models;
+
 namespace Inkdrop_lite.Features.Notebooks.Contracts;
 
 public sealed record NotebookResponse(
     Guid Id,
     string Name,
-    string? Description,
-    DateTime CreatedAt);
+    Guid? ParentNotebookId,
+    int? Order,
+    NotebookIconType IconType,
+    string? IconSvg,
+    Guid? IconAttachmentId,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);

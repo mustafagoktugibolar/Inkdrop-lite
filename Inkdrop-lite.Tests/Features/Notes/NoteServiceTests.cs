@@ -12,10 +12,11 @@ public sealed class NoteServiceTests
     {
         await using var database = await SqliteTestDb.CreateAsync();
         var service = new NoteService(database.Context);
+        var notebook = await database.AddNotebookAsync();
         var startedAt = DateTime.UtcNow;
 
         var created = await service.CreateAsync(
-            new CreateNoteRequest("Title", "# Markdown", NoteStatus.Active, null),
+            new CreateNoteRequest("Title", "# Markdown", NoteStatus.Active, notebook.Id),
             CancellationToken.None);
 
         Assert.NotEqual(Guid.Empty, created.Id);
@@ -33,12 +34,13 @@ public sealed class NoteServiceTests
         Assert.Equal(created.Status, found.Status);
         Assert.Equal(created.NotebookId, found.NotebookId);
         Assert.Equal(created.TagIds, found.TagIds);
+        Assert.Equal(created.Pinned, found.Pinned);
         Assert.Equal(created.CreatedAt, found.CreatedAt);
         Assert.Equal(created.UpdatedAt, found.UpdatedAt);
 
         var updated = await service.UpdateAsync(
             created.Id,
-            new UpdateNoteRequest("Updated", "New content", NoteStatus.Completed, null),
+            new UpdateNoteRequest("Updated", "New content", NoteStatus.Completed, notebook.Id),
             CancellationToken.None);
 
         Assert.True(updated);
@@ -58,14 +60,17 @@ public sealed class NoteServiceTests
     public async Task GetAll_returns_notes_by_most_recent_update()
     {
         await using var database = await SqliteTestDb.CreateAsync();
+        var notebook = await database.AddNotebookAsync();
         var older = new Note
         {
             Title = "Older",
+            NotebookId = notebook.Id,
             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
         var newer = new Note
         {
             Title = "Newer",
+            NotebookId = notebook.Id,
             UpdatedAt = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)
         };
 

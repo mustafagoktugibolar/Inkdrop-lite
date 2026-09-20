@@ -1,15 +1,26 @@
 import { apiRequest } from './client'
 
+export type NotebookIconType = 'None' | 'Svg' | 'Attachment'
+
 export interface NotebookResponse {
   id: string
   name: string
-  description: string | null
+  parentNotebookId: string | null
+  order: number | null
+  iconType: NotebookIconType
+  iconSvg: string | null
+  iconAttachmentId: string | null
   createdAt: string
+  updatedAt: string
 }
 
 export interface SaveNotebookRequest {
   name: string
-  description: string | null
+  parentNotebookId: string | null
+  order: number | null
+  iconType: NotebookIconType
+  iconSvg: string | null
+  iconAttachmentId: string | null
 }
 
 export const notebooksApi = {

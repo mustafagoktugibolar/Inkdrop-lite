@@ -17,6 +17,55 @@ namespace Inkdrop_lite.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("InkdropLite.Api.Models.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Hash")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hash");
+
+                    b.HasIndex("StoragePath")
+                        .IsUnique();
+
+                    b.ToTable("Attachments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Attachments_ContentLength", "\"ContentLength\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("InkdropLite.Api.Models.Note", b =>
                 {
                     b.Property<Guid>("Id")
@@ -25,18 +74,20 @@ namespace Inkdrop_lite.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasMaxLength(1048576)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("CreatedSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("app");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("NotebookId")
+                    b.Property<Guid>("NotebookId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OwnerId")
@@ -44,67 +95,48 @@ namespace Inkdrop_lite.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Status")
+                    b.Property<bool>("Pinned")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("SourceTemplateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("app");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NotebookId");
 
-                    b.HasIndex("OwnerId", "IsDeleted", "UpdatedAt");
+                    b.HasIndex("SourceTemplateId");
 
-                    b.ToTable("Notes");
-                });
+                    b.HasIndex("Status");
 
-            modelBuilder.Entity("InkdropLite.Api.Models.NoteTag", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                    b.HasIndex("UpdatedAt");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.HasIndex("NotebookId", "UpdatedAt");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("NoteId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NoteId");
-
-                    b.HasIndex("TagId");
-
-                    b.HasIndex("OwnerId", "IsDeleted");
-
-                    b.HasIndex("OwnerId", "NoteId", "TagId")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = 0");
-
-                    b.ToTable("NoteTags");
+                    b.ToTable("Notes", t =>
+                        {
+                            t.HasCheckConstraint("CK_Notes_NotOwnTemplate", "\"SourceTemplateId\" IS NULL OR \"SourceTemplateId\" <> \"Id\"");
+                        });
                 });
 
             modelBuilder.Entity("InkdropLite.Api.Models.Notebook", b =>
@@ -116,22 +148,32 @@ namespace Inkdrop_lite.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAt")
+                    b.Property<Guid?>("IconAttachmentId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("IconSvg")
+                        .HasMaxLength(262144)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("IconType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("Order")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OwnerId")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentNotebookId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -139,11 +181,18 @@ namespace Inkdrop_lite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "Name")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = 0");
+                    b.HasIndex("IconAttachmentId");
 
-                    b.ToTable("Notebooks");
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Order");
+
+                    b.HasIndex("ParentNotebookId");
+
+                    b.ToTable("Notebooks", t =>
+                        {
+                            t.HasCheckConstraint("CK_Notebooks_NotOwnParent", "\"ParentNotebookId\" IS NULL OR \"ParentNotebookId\" <> \"Id\"");
+                        });
                 });
 
             modelBuilder.Entity("InkdropLite.Api.Models.Tag", b =>
@@ -152,18 +201,19 @@ namespace Inkdrop_lite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("OwnerId")
                         .IsRequired()
@@ -175,11 +225,42 @@ namespace Inkdrop_lite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UpdatedAt");
+
                     b.HasIndex("OwnerId", "Name")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = 0");
+                        .IsUnique();
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("NoteAttachment", b =>
+                {
+                    b.Property<Guid>("NoteId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NoteId", "AttachmentId");
+
+                    b.HasIndex("AttachmentId");
+
+                    b.ToTable("NoteAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("NoteTag", b =>
+                {
+                    b.Property<Guid>("NoteId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NoteId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("NoteTags", (string)null);
                 });
 
             modelBuilder.Entity("InkdropLite.Api.Models.Note", b =>
@@ -187,43 +268,81 @@ namespace Inkdrop_lite.Migrations
                     b.HasOne("InkdropLite.Api.Models.Notebook", "Notebook")
                         .WithMany("Notes")
                         .HasForeignKey("NotebookId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InkdropLite.Api.Models.Note", "SourceTemplate")
+                        .WithMany("DerivedNotes")
+                        .HasForeignKey("SourceTemplateId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Notebook");
-                });
 
-            modelBuilder.Entity("InkdropLite.Api.Models.NoteTag", b =>
-                {
-                    b.HasOne("InkdropLite.Api.Models.Note", "Note")
-                        .WithMany("NoteTags")
-                        .HasForeignKey("NoteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InkdropLite.Api.Models.Tag", "Tag")
-                        .WithMany("NoteTags")
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Note");
-
-                    b.Navigation("Tag");
-                });
-
-            modelBuilder.Entity("InkdropLite.Api.Models.Note", b =>
-                {
-                    b.Navigation("NoteTags");
+                    b.Navigation("SourceTemplate");
                 });
 
             modelBuilder.Entity("InkdropLite.Api.Models.Notebook", b =>
                 {
-                    b.Navigation("Notes");
+                    b.HasOne("InkdropLite.Api.Models.Attachment", "IconAttachment")
+                        .WithMany("NotebooksUsingAsIcon")
+                        .HasForeignKey("IconAttachmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("InkdropLite.Api.Models.Notebook", "ParentNotebook")
+                        .WithMany("ChildNotebooks")
+                        .HasForeignKey("ParentNotebookId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IconAttachment");
+
+                    b.Navigation("ParentNotebook");
                 });
 
-            modelBuilder.Entity("InkdropLite.Api.Models.Tag", b =>
+            modelBuilder.Entity("NoteAttachment", b =>
                 {
-                    b.Navigation("NoteTags");
+                    b.HasOne("InkdropLite.Api.Models.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InkdropLite.Api.Models.Note", null)
+                        .WithMany()
+                        .HasForeignKey("NoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NoteTag", b =>
+                {
+                    b.HasOne("InkdropLite.Api.Models.Note", null)
+                        .WithMany()
+                        .HasForeignKey("NoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InkdropLite.Api.Models.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InkdropLite.Api.Models.Attachment", b =>
+                {
+                    b.Navigation("NotebooksUsingAsIcon");
+                });
+
+            modelBuilder.Entity("InkdropLite.Api.Models.Note", b =>
+                {
+                    b.Navigation("DerivedNotes");
+                });
+
+            modelBuilder.Entity("InkdropLite.Api.Models.Notebook", b =>
+                {
+                    b.Navigation("ChildNotebooks");
+
+                    b.Navigation("Notes");
                 });
 #pragma warning restore 612, 618
         }

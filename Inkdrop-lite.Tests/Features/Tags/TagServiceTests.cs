@@ -34,7 +34,7 @@ public sealed class TagServiceTests
     }
 
     [Fact]
-    public async Task Create_rejects_duplicate_names_at_database_boundary()
+    public async Task Create_rejects_case_insensitive_duplicate_names_at_database_boundary()
     {
         await using var database = await SqliteTestDb.CreateAsync();
         var service = new TagService(database.Context);
@@ -44,7 +44,7 @@ public sealed class TagServiceTests
             CancellationToken.None);
 
         await Assert.ThrowsAsync<DbUpdateException>(() => service.CreateAsync(
-            new CreateTagRequest("unique"),
+            new CreateTagRequest("UNIQUE"),
             CancellationToken.None));
     }
 }
