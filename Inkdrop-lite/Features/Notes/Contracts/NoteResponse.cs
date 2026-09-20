@@ -8,5 +8,6 @@ public sealed record NoteResponse(
     string Content,
     NoteStatus Status,
     Guid? NotebookId,
+    IReadOnlyList<Guid> TagIds,
     DateTime CreatedAt,
     DateTime UpdatedAt);

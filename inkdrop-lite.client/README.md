@@ -1,6 +1,33 @@
-# inkdrop-lite.client
+# Inkdrop Lite Client
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 client for the Inkdrop Lite ASP.NET Core API.
+
+## Backend connection
+
+Development requests to `/api` and `/health` are proxied to
+`http://localhost:5208`. Protected API calls acquire the configured Entra ID
+scope with MSAL and send the access token as a bearer token.
+
+Copy `.env.example` to `.env.development` and fill in the Entra values. The
+repository already contains a local development file for the current app
+registration; it is excluded from Git.
+
+In Microsoft Entra admin center, add this exact SPA redirect URI to the client
+app registration:
+
+```text
+http://localhost:52364/auth-redirect.html
+```
+
+The API app registration must expose the scope configured by `VITE_API_SCOPE`,
+currently `access_as_user`.
+
+Run the backend and client in separate terminals:
+
+```sh
+dotnet run --project ../Inkdrop-lite/Inkdrop-lite.csproj --launch-profile https
+npm run dev
+```
 
 ## Recommended IDE Setup
 

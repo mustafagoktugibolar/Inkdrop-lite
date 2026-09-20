@@ -26,7 +26,15 @@ public sealed class NoteServiceTests
             created.Id,
             CancellationToken.None);
 
-        Assert.Equal(created, found);
+        Assert.NotNull(found);
+        Assert.Equal(created.Id, found.Id);
+        Assert.Equal(created.Title, found.Title);
+        Assert.Equal(created.Content, found.Content);
+        Assert.Equal(created.Status, found.Status);
+        Assert.Equal(created.NotebookId, found.NotebookId);
+        Assert.Equal(created.TagIds, found.TagIds);
+        Assert.Equal(created.CreatedAt, found.CreatedAt);
+        Assert.Equal(created.UpdatedAt, found.UpdatedAt);
 
         var updated = await service.UpdateAsync(
             created.Id,

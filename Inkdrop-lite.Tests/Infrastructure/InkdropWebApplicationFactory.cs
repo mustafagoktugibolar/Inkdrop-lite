@@ -14,14 +14,15 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment("Development");
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Inkdrop-lite"] = $"Data Source={_databasePath}",
-                ["AzureAd:Scopes"] = "access_as_user"
+                ["AzureAd:Scopes"] = "access_as_user",
+                ["Cors:AllowedOrigins:0"] = "http://localhost:52364"
             });
         });
 

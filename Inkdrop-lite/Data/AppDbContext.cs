@@ -20,6 +20,12 @@ namespace Inkdrop_lite.Data
                 .HasIndex(x => x.Name)
                 .IsUnique();
 
+            modelBuilder.Entity<Note>()
+                .HasOne(x => x.Notebook)
+                .WithMany(x => x.Notes)
+                .HasForeignKey(x => x.NotebookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<NoteTag>()
                 .HasKey(x => new { x.NoteId, x.TagId });
 

@@ -1,0 +1,33 @@
+import { apiRequest } from './client'
+
+export interface TagResponse {
+  id: string
+  name: string
+}
+
+export interface SaveTagRequest {
+  name: string
+}
+
+export const tagsApi = {
+  getAll: () => apiRequest<TagResponse[]>('/api/tags'),
+
+  getById: (id: string) => apiRequest<TagResponse>(`/api/tags/${id}`),
+
+  create: (request: SaveTagRequest) =>
+    apiRequest<TagResponse>('/api/tags', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  update: (id: string, request: SaveTagRequest) =>
+    apiRequest<void>(`/api/tags/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/api/tags/${id}`, {
+      method: 'DELETE',
+    }),
+}

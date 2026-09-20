@@ -22,6 +22,11 @@ var requiredScopes = builder.Configuration["AzureAd:Scopes"]?
     .Split([' ', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     ?? [];
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
+    ?? [];
+
 if (requiredScopes.Length == 0)
 {
     throw new InvalidOperationException("At least one AzureAd:Scopes value must be configured.");
@@ -99,9 +104,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://notes.your-domain.com")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -129,6 +132,7 @@ else
 {
     app.UseExceptionHandler();
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseResponseCompression();
@@ -146,8 +150,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready")
 })
 .AllowAnonymous();
-
-app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 

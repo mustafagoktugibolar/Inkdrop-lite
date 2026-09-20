@@ -19,6 +19,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
                 note.Content,
                 note.Status,
                 note.NotebookId,
+                note.NoteTags.Select(noteTag => noteTag.TagId).ToList(),
                 note.CreatedAt,
                 note.UpdatedAt))
             .ToListAsync(cancellationToken);
@@ -37,6 +38,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
                 note.Content,
                 note.Status,
                 note.NotebookId,
+                note.NoteTags.Select(noteTag => noteTag.TagId).ToList(),
                 note.CreatedAt,
                 note.UpdatedAt))
             .FirstOrDefaultAsync(cancellationToken);
@@ -54,6 +56,10 @@ public sealed class NoteService(AppDbContext context) : INoteService
             Content = request.Content,
             Status = request.Status,
             NotebookId = request.NotebookId,
+            NoteTags = request.TagIds
+                .Distinct()
+                .Select(tagId => new NoteTag { TagId = tagId })
+                .ToList(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -70,6 +76,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
         CancellationToken cancellationToken)
     {
         var note = await context.Notes
+            .Include(note => note.NoteTags)
             .FirstOrDefaultAsync(note => note.Id == id, cancellationToken);
 
         if (note is null)
@@ -82,6 +89,26 @@ public sealed class NoteService(AppDbContext context) : INoteService
         note.Status = request.Status;
         note.NotebookId = request.NotebookId;
         note.UpdatedAt = DateTime.UtcNow;
+
+        var requestedTagIds = request.TagIds.ToHashSet();
+        var removedNoteTags = note.NoteTags
+            .Where(noteTag => !requestedTagIds.Contains(noteTag.TagId))
+            .ToList();
+
+        context.NoteTags.RemoveRange(removedNoteTags);
+
+        var existingTagIds = note.NoteTags
+            .Select(noteTag => noteTag.TagId)
+            .ToHashSet();
+
+        foreach (var tagId in requestedTagIds.Except(existingTagIds))
+        {
+            note.NoteTags.Add(new NoteTag
+            {
+                NoteId = note.Id,
+                TagId = tagId
+            });
+        }
 
         await context.SaveChangesAsync(cancellationToken);
         return true;
@@ -109,6 +136,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
             note.Content,
             note.Status,
             note.NotebookId,
+            note.NoteTags.Select(noteTag => noteTag.TagId).ToList(),
             note.CreatedAt,
             note.UpdatedAt);
 }
