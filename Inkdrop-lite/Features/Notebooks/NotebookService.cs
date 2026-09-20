@@ -42,10 +42,8 @@ public sealed class NotebookService(AppDbContext context) : INotebookService
     {
         var notebook = new Notebook
         {
-            Id = Guid.NewGuid(),
             Name = request.Name,
-            Description = request.Description,
-            CreatedAt = DateTime.UtcNow
+            Description = request.Description
         };
 
         context.Notebooks.Add(notebook);
@@ -84,6 +82,13 @@ public sealed class NotebookService(AppDbContext context) : INotebookService
             return false;
         }
 
+        var notes = await context.Notes
+            .Include(note => note.NoteTags)
+            .Where(note => note.NotebookId == notebook.Id)
+            .ToListAsync(cancellationToken);
+
+        context.NoteTags.RemoveRange(notes.SelectMany(note => note.NoteTags));
+        context.Notes.RemoveRange(notes);
         context.Notebooks.Remove(notebook);
         await context.SaveChangesAsync(cancellationToken);
         return true;

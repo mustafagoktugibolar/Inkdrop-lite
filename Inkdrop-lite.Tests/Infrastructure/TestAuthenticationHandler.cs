@@ -23,9 +23,10 @@ internal sealed class TestAuthenticationHandler(
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
+        var userId = Request.Headers[UserHeader].ToString();
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, "test-user")
+            new(ClaimTypes.NameIdentifier, userId)
         };
 
         if (Request.Headers.TryGetValue(ScopeHeader, out var scope))

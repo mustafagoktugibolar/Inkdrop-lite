@@ -36,6 +36,8 @@ if (requiredScopes.Length == 0)
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
 // Application services
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<INotebookService, NotebookService>();
 builder.Services.AddScoped<ITagService, TagService>();

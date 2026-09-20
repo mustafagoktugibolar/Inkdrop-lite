@@ -3,8 +3,11 @@ using System.Net.Http.Json;
 using Inkdrop_lite.Features.Notebooks.Contracts;
 using Inkdrop_lite.Features.Notes.Contracts;
 using Inkdrop_lite.Features.Tags.Contracts;
+using Inkdrop_lite.Data;
 using Inkdrop_lite.Tests.Infrastructure;
 using InkdropLite.Api.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Inkdrop_lite.Tests.Api;
 
@@ -122,6 +125,22 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.Equal(NoteStatus.Completed, updated.Status);
         Assert.Empty(updated.TagIds);
 
+        var restoreTagResponse = await client.PutAsJsonAsync(
+            $"/api/notes/{created.Id}",
+            new UpdateNoteRequest(
+                title,
+                "# Updated",
+                NoteStatus.Completed,
+                null,
+                [tag.Id]),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.NoContent, restoreTagResponse.StatusCode);
+        updated = await client.GetFromJsonAsync<NoteResponse>(
+            $"/api/notes/{created.Id}",
+            CancellationToken.None);
+        Assert.NotNull(updated);
+        Assert.Contains(tag.Id, updated.TagIds);
+
         var deleteResponse = await client.DeleteAsync(
             $"/api/notes/{created.Id}",
             CancellationToken.None);
@@ -129,6 +148,19 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.Equal(
             HttpStatusCode.NotFound,
             (await client.GetAsync($"/api/notes/{created.Id}")).StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var deletedNote = await database.Notes
+            .IgnoreQueryFilters()
+            .SingleAsync(note => note.Id == created.Id);
+        var deletedNoteTag = await database.NoteTags
+            .IgnoreQueryFilters()
+            .SingleAsync(noteTag =>
+                noteTag.NoteId == created.Id && noteTag.TagId == tag.Id);
+        Assert.True(deletedNote.IsDeleted);
+        Assert.NotNull(deletedNote.DeletedAt);
+        Assert.True(deletedNoteTag.IsDeleted);
     }
 
     [Fact]
@@ -185,6 +217,17 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.Equal(
             HttpStatusCode.NotFound,
             (await client.GetAsync($"/api/notes/{linkedNote.Id}")).StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var deletedNotebook = await database.Notebooks
+            .IgnoreQueryFilters()
+            .SingleAsync(notebook => notebook.Id == created.Id);
+        var deletedLinkedNote = await database.Notes
+            .IgnoreQueryFilters()
+            .SingleAsync(note => note.Id == linkedNote.Id);
+        Assert.True(deletedNotebook.IsDeleted);
+        Assert.True(deletedLinkedNote.IsDeleted);
     }
 
     [Fact]
@@ -225,5 +268,42 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
         Assert.Equal(
             HttpStatusCode.NotFound,
             (await client.GetAsync($"/api/tags/{created.Id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Users_only_see_and_change_their_own_data()
+    {
+        using var alice = _factory.CreateAuthenticatedClient(userId: "alice");
+        using var bob = _factory.CreateAuthenticatedClient(userId: "bob");
+        var sharedName = $"Private-{Guid.NewGuid():N}";
+
+        var aliceCreateResponse = await alice.PostAsJsonAsync(
+            "/api/tags",
+            new CreateTagRequest(sharedName),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.Created, aliceCreateResponse.StatusCode);
+        var aliceTag = await aliceCreateResponse.Content.ReadFromJsonAsync<TagResponse>(
+            CancellationToken.None);
+        Assert.NotNull(aliceTag);
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await bob.GetAsync($"/api/tags/{aliceTag.Id}")).StatusCode);
+        Assert.DoesNotContain(
+            await bob.GetFromJsonAsync<TagResponse[]>("/api/tags") ?? [],
+            tag => tag.Id == aliceTag.Id);
+
+        var bobCreateResponse = await bob.PostAsJsonAsync(
+            "/api/tags",
+            new CreateTagRequest(sharedName),
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.Created, bobCreateResponse.StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await bob.DeleteAsync($"/api/tags/{aliceTag.Id}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await alice.GetAsync($"/api/tags/{aliceTag.Id}")).StatusCode);
     }
 }

@@ -41,10 +41,12 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
         });
     }
 
-    public HttpClient CreateAuthenticatedClient(string? scope = "access_as_user")
+    public HttpClient CreateAuthenticatedClient(
+        string? scope = "access_as_user",
+        string userId = "test-user")
     {
         var client = CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserHeader, "true");
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserHeader, userId);
 
         if (scope is not null)
         {

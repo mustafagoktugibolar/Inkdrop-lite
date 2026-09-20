@@ -1,3 +1,4 @@
+using Inkdrop_lite.Authorization;
 using Inkdrop_lite.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ internal sealed class SqliteTestDb : IAsyncDisposable
             .UseSqlite(connection)
             .Options;
 
-        var context = new AppDbContext(options);
+        var context = new AppDbContext(options, new FixedCurrentUser("test-user"));
         await context.Database.EnsureCreatedAsync();
 
         return new SqliteTestDb(connection, context);
@@ -35,5 +36,10 @@ internal sealed class SqliteTestDb : IAsyncDisposable
     {
         await Context.DisposeAsync();
         await _connection.DisposeAsync();
+    }
+
+    private sealed class FixedCurrentUser(string userId) : ICurrentUser
+    {
+        public string? UserId { get; } = userId;
     }
 }

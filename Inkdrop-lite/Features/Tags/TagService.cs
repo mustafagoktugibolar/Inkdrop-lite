@@ -34,7 +34,6 @@ public sealed class TagService(AppDbContext context) : ITagService
     {
         var tag = new Tag
         {
-            Id = Guid.NewGuid(),
             Name = request.Name
         };
 
@@ -66,6 +65,7 @@ public sealed class TagService(AppDbContext context) : ITagService
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var tag = await context.Tags
+            .Include(tag => tag.NoteTags)
             .FirstOrDefaultAsync(tag => tag.Id == id, cancellationToken);
 
         if (tag is null)
@@ -73,6 +73,7 @@ public sealed class TagService(AppDbContext context) : ITagService
             return false;
         }
 
+        context.NoteTags.RemoveRange(tag.NoteTags);
         context.Tags.Remove(tag);
         await context.SaveChangesAsync(cancellationToken);
         return true;

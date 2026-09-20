@@ -1,6 +1,8 @@
+using Inkdrop_lite.Domain.Common;
+
 namespace InkdropLite.Api.Models;
 
-public class NoteTag
+public class NoteTag : UserOwnedEntity
 {
     public Guid NoteId { get; set; }
 

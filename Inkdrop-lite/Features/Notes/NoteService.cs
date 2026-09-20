@@ -48,20 +48,19 @@ public sealed class NoteService(AppDbContext context) : INoteService
         CreateNoteRequest request,
         CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var tagIds = await ValidateReferencesAsync(
+            request.NotebookId,
+            request.TagIds,
+            cancellationToken);
         var note = new Note
         {
-            Id = Guid.NewGuid(),
             Title = request.Title,
             Content = request.Content,
             Status = request.Status,
             NotebookId = request.NotebookId,
-            NoteTags = request.TagIds
-                .Distinct()
+            NoteTags = tagIds
                 .Select(tagId => new NoteTag { TagId = tagId })
-                .ToList(),
-            CreatedAt = now,
-            UpdatedAt = now
+                .ToList()
         };
 
         context.Notes.Add(note);
@@ -76,7 +75,6 @@ public sealed class NoteService(AppDbContext context) : INoteService
         CancellationToken cancellationToken)
     {
         var note = await context.Notes
-            .Include(note => note.NoteTags)
             .FirstOrDefaultAsync(note => note.Id == id, cancellationToken);
 
         if (note is null)
@@ -84,26 +82,44 @@ public sealed class NoteService(AppDbContext context) : INoteService
             return false;
         }
 
+        var tagIds = await ValidateReferencesAsync(
+            request.NotebookId,
+            request.TagIds,
+            cancellationToken);
+
         note.Title = request.Title;
         note.Content = request.Content;
         note.Status = request.Status;
         note.NotebookId = request.NotebookId;
-        note.UpdatedAt = DateTime.UtcNow;
 
-        var requestedTagIds = request.TagIds.ToHashSet();
-        var removedNoteTags = note.NoteTags
+        var existingNoteTags = await context.NoteTags
+            .IgnoreQueryFilters()
+            .Where(noteTag =>
+                noteTag.NoteId == note.Id &&
+                noteTag.OwnerId == context.CurrentOwnerId)
+            .ToListAsync(cancellationToken);
+        var requestedTagIds = tagIds.ToHashSet();
+        var removedNoteTags = existingNoteTags
+            .Where(noteTag => !noteTag.IsDeleted)
             .Where(noteTag => !requestedTagIds.Contains(noteTag.TagId))
             .ToList();
 
         context.NoteTags.RemoveRange(removedNoteTags);
 
-        var existingTagIds = note.NoteTags
+        var existingTagIds = existingNoteTags
             .Select(noteTag => noteTag.TagId)
             .ToHashSet();
 
+        foreach (var restoredNoteTag in existingNoteTags.Where(noteTag =>
+                     noteTag.IsDeleted && requestedTagIds.Contains(noteTag.TagId)))
+        {
+            restoredNoteTag.IsDeleted = false;
+            restoredNoteTag.DeletedAt = null;
+        }
+
         foreach (var tagId in requestedTagIds.Except(existingTagIds))
         {
-            note.NoteTags.Add(new NoteTag
+            context.NoteTags.Add(new NoteTag
             {
                 NoteId = note.Id,
                 TagId = tagId
@@ -117,6 +133,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var note = await context.Notes
+            .Include(note => note.NoteTags)
             .FirstOrDefaultAsync(note => note.Id == id, cancellationToken);
 
         if (note is null)
@@ -124,6 +141,7 @@ public sealed class NoteService(AppDbContext context) : INoteService
             return false;
         }
 
+        context.NoteTags.RemoveRange(note.NoteTags);
         context.Notes.Remove(note);
         await context.SaveChangesAsync(cancellationToken);
         return true;
@@ -139,4 +157,33 @@ public sealed class NoteService(AppDbContext context) : INoteService
             note.NoteTags.Select(noteTag => noteTag.TagId).ToList(),
             note.CreatedAt,
             note.UpdatedAt);
+
+    private async Task<IReadOnlyList<Guid>> ValidateReferencesAsync(
+        Guid? notebookId,
+        IReadOnlyCollection<Guid> requestedTagIds,
+        CancellationToken cancellationToken)
+    {
+        if (notebookId is not null &&
+            !await context.Notebooks.AnyAsync(
+                notebook => notebook.Id == notebookId,
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "The selected notebook does not exist or belongs to another user.");
+        }
+
+        var distinctTagIds = requestedTagIds.Distinct().ToList();
+        var accessibleTagIds = await context.Tags
+            .Where(tag => distinctTagIds.Contains(tag.Id))
+            .Select(tag => tag.Id)
+            .ToListAsync(cancellationToken);
+
+        if (accessibleTagIds.Count != distinctTagIds.Count)
+        {
+            throw new InvalidOperationException(
+                "One or more selected tags do not exist or belong to another user.");
+        }
+
+        return accessibleTagIds;
+    }
 }

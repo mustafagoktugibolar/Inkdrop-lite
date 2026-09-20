@@ -1,9 +1,9 @@
+using Inkdrop_lite.Domain.Common;
+
 namespace InkdropLite.Api.Models;
 
-public class Note
+public class Note : UserOwnedEntity
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-
     public required string Title { get; set; }
 
     public string Content { get; set; } = string.Empty;
@@ -16,7 +16,4 @@ public class Note
 
     public List<NoteTag> NoteTags { get; set; } = [];
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
