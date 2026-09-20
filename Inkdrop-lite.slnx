@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Inkdrop-lite.Client/inkdrop-lite.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="Inkdrop-lite.Tests/Inkdrop-lite.Tests.csproj" />
+  <Project Path="Inkdrop-lite/Inkdrop-lite.csproj" />
+</Solution>

@@ -1,0 +1,6 @@
+@Inkdrop_lite_HostAddress = http://localhost:5208
+
+GET {{Inkdrop_lite_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
