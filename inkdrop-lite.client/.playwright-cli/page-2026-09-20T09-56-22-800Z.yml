@@ -1,0 +1,45 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - link "Inkdrop Lite" [ref=e5] [cursor=pointer]:
+      - /url: "#"
+    - generic [ref=e12]: API online
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]: Your private writing space
+      - generic [ref=e17]:
+        - heading "Your context, beautifully organized." [level=1] [ref=e18]
+        - paragraph [ref=e19]: Keep notes, projects, and the small decisions that move your work forward in one calm Markdown workspace.
+      - button "Open your workspace" [ref=e20] [cursor=pointer]
+      - paragraph [ref=e21]: Secure sign in with your Microsoft account
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]: Inkdrop Lite
+        - generic [ref=e25]: A focused space for everything worth remembering.
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: All Notes
+            - generic [ref=e29]: "24"
+          - generic [ref=e30]: NOTEBOOKS
+          - generic [ref=e31]: Inbox
+          - generic [ref=e32]: Work
+          - generic [ref=e33]: Ideas
+          - generic [ref=e34]: STATUS
+          - generic [ref=e35]: Active
+          - generic [ref=e36]: Completed
+        - generic [ref=e37]:
+          - generic [ref=e38]: All Notes
+          - generic [ref=e40]:
+            - generic [ref=e41]: Building a calmer workflow
+            - generic [ref=e42]: Today · work
+            - paragraph [ref=e43]: Small systems compound over time...
+          - generic [ref=e44]:
+            - generic [ref=e45]: Project notes
+            - generic [ref=e46]: Yesterday · ideas
+        - generic [ref=e47]:
+          - generic [ref=e48]: WORK · ACTIVE
+          - heading "Building a calmer workflow" [level=2] [ref=e49]
+          - generic [ref=e50]:
+            - generic [ref=e51]: "## The idea"
+            - paragraph [ref=e52]: Capture context while it is fresh, keep it easy to retrieve, and let the system stay out of the way.
+      - generic [ref=e53]: Markdown notes, notebooks, statuses and tags in one place.
