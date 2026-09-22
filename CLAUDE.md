@@ -29,6 +29,10 @@ Frontend (`inkdrop-lite.client/`, Node ^22.18 or >=24.12): `npm run dev` (port 5
 
 Because deletes are soft, unique indexes (Notebook/Tag name per owner, NoteTag) are filtered with `"IsDeleted" = 0` — keep that filter on any new unique index. Use `IgnoreQueryFilters()` deliberately if you ever need deleted or cross-owner rows.
 
+**MCP server (`/mcp`)** lives in this API (`Features/Mcp`): tools in `InkdropTools` call the same feature services, behind an OAuth facade in front of Entra (`Features/Mcp/OAuth`) and an optional dedicated `AzureAd:McpScope`. Agents get read + create/update tools only (no delete). Notes record `CreatedSource`/`UpdatedSource` (`app` or `mcp:{client}/{version}`). The SPA's "Connect to agent" dialog documents how to add it. Product detail is in `docs/PRD.md` §9.
+
+**Attachments** are stored as files under `Attachments:Root` (see PRD); `AttachmentService` owns path safety and size limits. Unlike notes/notebooks/tags, code in `AppDbContext` hard-deletes rows (the `Deleted` state is not converted to a soft delete), so the soft-delete description above does not hold for deletes today — verify before relying on `IsDeleted`.
+
 **Backend layering:** Controllers (thin, `RequireRateLimiting("fixed")`) → `Features/{Notes,Notebooks,Tags}` scoped services behind `I*Service` interfaces, with request/response records in each feature's `Contracts/`. Services take `AppDbContext` directly (no repository layer). Migrations are applied automatically at startup in `Program.cs` (`MigrateAsync`), and `public partial class Program` exists so tests can use `WebApplicationFactory`.
 
 **Tests:** `InkdropWebApplicationFactory` swaps in a per-run temp SQLite file and a `TestAuthenticationHandler` driven by request headers (`CreateAuthenticatedClient(scope, userId)`), so boundary tests exercise real auth policies and per-user isolation without Entra. Service tests use `SqliteTestDb`.

@@ -31,9 +31,39 @@ export interface SaveNoteRequest {
   pinned: boolean
   notebookId: string
   tagIds: string[]
+  /** Honoured on create only. */
+  sourceTemplateId?: string | null
+}
+
+export interface NoteSummaryResponse {
+  id: string
+  title: string
+  status: NoteStatus
+  pinned: boolean
+  notebookId: string
+  contentLength: number
+  tagIds: string[]
+  updatedAt: string
+}
+
+export interface NoteSearchParams {
+  query?: string
+  notebookId?: string
+  tagId?: string
+  status?: NoteStatus
+  limit?: number
 }
 
 export const notesApi = {
+  /** Server-side search: matches title, content, notebook name and tag name. */
+  search: (params: NoteSearchParams) => {
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== '') search.set(key, String(value))
+    }
+    return apiRequest<NoteSummaryResponse[]>(`/api/notes/search?${search}`)
+  },
+
   getAll: () => apiRequest<NoteResponse[]>('/api/notes'),
 
   getById: (id: string) => apiRequest<NoteResponse>(`/api/notes/${id}`),

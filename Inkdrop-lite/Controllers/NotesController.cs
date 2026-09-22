@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Inkdrop_lite.Features.Notes;
 using Inkdrop_lite.Features.Notes.Contracts;
+using InkdropLite.Api.Models;
 
 namespace Inkdrop_lite.Controllers;
 
@@ -18,6 +19,20 @@ public class NotesController(
         CancellationToken cancellationToken)
     {
         var notes = await noteService.GetAllAsync(cancellationToken);
+        return Ok(notes);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<IReadOnlyList<NoteSummaryResponse>>> Search(
+        CancellationToken cancellationToken,
+        [FromQuery] string? query = null,
+        [FromQuery] Guid? notebookId = null,
+        [FromQuery] Guid? tagId = null,
+        [FromQuery] NoteStatus? status = null,
+        [FromQuery] int limit = 100)
+    {
+        var notes = await noteService.SearchAsync(
+            query, notebookId, tagId, status, limit, cancellationToken);
         return Ok(notes);
     }
 

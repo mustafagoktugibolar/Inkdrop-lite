@@ -20,11 +20,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function send(path: string, init: RequestInit, accept: string): Promise<Response> {
   const token = await getAccessToken()
   const headers = new Headers(init.headers)
 
-  headers.set('Accept', 'application/json')
+  headers.set('Accept', accept)
   headers.set('Authorization', `Bearer ${token}`)
 
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -46,11 +46,22 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     throw new ApiError(response.status, problem)
   }
 
+  return response
+}
+
+export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await send(path, init, 'application/json')
+
   if (response.status === 204) {
     return undefined as T
   }
 
   return (await response.json()) as T
+}
+
+/** Authenticated download (a plain <a>/<img> cannot send the bearer token). */
+export async function apiBlob(path: string): Promise<Blob> {
+  return (await send(path, {}, '*/*')).blob()
 }
 
 export async function checkApiHealth(): Promise<boolean> {

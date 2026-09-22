@@ -36,9 +36,12 @@ public sealed class RuleViolationExceptionHandler(IProblemDetailsService problem
             ProblemDetails = new ProblemDetails
             {
                 Status = violation.StatusCode,
-                Title = violation.StatusCode == StatusCodes.Status409Conflict
-                    ? "Conflict"
-                    : "Bad Request",
+                Title = violation.StatusCode switch
+                {
+                    StatusCodes.Status409Conflict => "Conflict",
+                    StatusCodes.Status413PayloadTooLarge => "Payload Too Large",
+                    _ => "Bad Request"
+                },
                 Detail = violation.Message
             }
         });

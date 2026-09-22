@@ -92,23 +92,26 @@ Deletes are **hard deletes**. Soft delete was intentionally removed so the FK be
 
 ### Notes
 - CRUD, list ordered by `UpdatedAt` desc, tag assignment by `TagIds` **[Done]**
-- Status, pinned flag, move between notebooks **[Done]** (UI: status yes; pinned/template **[API only]**)
-- Create from a template via `SourceTemplateId` **[API only]**
-- Attach files to notes **[Planned]** — model exists, no upload/download endpoints
+- Status, pinned flag, move between notebooks **[Done]** (UI: pin toggle, status, agent/app source badge)
+- Create from a template via `SourceTemplateId` **[Done]** (UI: "New note from this template" copies the content client-side; the API only records the link)
+- Attach files to notes **[Done]** — `GET/PUT/DELETE /api/notes/{id}/attachments[/{attachmentId}]`; UI: attach, download, delete on the editor
 
 ### Notebooks
-- CRUD, nesting via `ParentNotebookId`, manual `Order`, SVG/attachment icons **[API only]** (UI: flat list, name only)
-- Tree rendering and drag-to-reorder **[Planned]**
+- CRUD, nesting via `ParentNotebookId`, manual `Order`, SVG/attachment icons **[Done]** (UI: collapsible tree, parent picker, order field, SVG or uploaded image icon; selecting a notebook includes its descendants). Icon attachments must be `image/*`.
+- Drag-to-reorder **[Planned]**
 
 ### Tags
 - CRUD with color **[Done]** API, name-only in UI **[Planned: color picker, usage counts]**
 - Usage count is computed on demand, never stored **[Planned]**
 
 ### Attachments
-- Metadata model and `AttachmentResponse` contract **[Done]**; upload/download/delete endpoints and disk storage **[Planned]**
-- Storage layout: `/data/inkdrop-lite.db` plus `/data/attachments/*`; the DB stores the relative path only.
+- **[Done]** `POST /api/attachments` (multipart `file`), `GET /api/attachments`, `GET /{id}`, `GET /{id}/content`, `DELETE /{id}`.
+- Storage layout: `{Attachments:Root}/attachments/{guid}{ext}` (default root `<content root>/data`; set `Attachments__Root` to `/data` in containers); the DB stores the relative path only. The client file name is display-only and never used on disk.
+- Limit `Attachments:MaxBytes` (default 10 MiB, over-limit → 413; Kestrel's 30 MB request cap still applies). Empty files → 400. Content type is normalised, unknown → `application/octet-stream`.
+- Downloads are always served as attachments with `nosniff` and `Content-Security-Policy: sandbox`, so uploaded HTML/SVG cannot run script in the API origin. The SPA fetches bytes with the bearer token (blob) since `<img>`/`<a>` cannot send it.
+- Attachments are hard-deleted (row, then file); note links cascade and notebook icons are set to null by the database. No per-user quota yet.
 
-### Search **[Done: backend, via MCP `search_notes`]** — plain `LIKE` queries; no HTTP endpoint or UI yet; FTS only when needed.
+### Search **[Done]** — plain `LIKE` queries over title, content, notebook name and tag name, via MCP `search_notes` and `GET /api/notes/search?query&notebookId&tagId&status&limit` (summaries, no content). The UI search box uses it (debounced). FTS5 only when needed; vector search deliberately deferred (needs an embedding provider and a second tenant-isolation path).
 
 ### Auth and tenancy **[Done]**
 - Entra ID sign-in (MSAL in the SPA), bearer tokens validated by the API, `ApiScope` policy on all controllers, fallback policy requires authentication.
@@ -121,7 +124,10 @@ Everything except health checks requires the `ApiScope`. Rate limited by the `fi
 | Resource | Endpoints |
 |---|---|
 | `/api/notes` | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` |
-| `/api/notebooks` | same |
+| `/api/notes/search` | `GET` (summaries) |
+| `/api/notes/{id}/attachments` | `GET`, `PUT /{attachmentId}`, `DELETE /{attachmentId}` |
+| `/api/attachments` | `GET`, `GET /{id}`, `GET /{id}/content`, `POST` (multipart), `DELETE /{id}` |
+| `/api/notebooks` | same as notes CRUD |
 | `/api/tags` | same |
 | `/mcp` | MCP Streamable HTTP, same auth (see §9) |
 | `/health/live`, `/health/ready` | anonymous |

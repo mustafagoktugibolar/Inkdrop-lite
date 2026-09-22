@@ -33,6 +33,8 @@ packages/
 *.db
 *.db-shm
 *.db-wal
+# Uploaded attachment files (default storage root)
+Inkdrop-lite/data/
 *.sqlite
 *.sqlite3
 

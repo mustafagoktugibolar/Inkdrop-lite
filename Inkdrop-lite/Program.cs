@@ -3,6 +3,7 @@ using Inkdrop_lite.Data;
 using Inkdrop_lite.Features.Notebooks;
 using Inkdrop_lite.Domain.Common;
 using Inkdrop_lite.Features.Common;
+using Inkdrop_lite.Features.Attachments;
 using Inkdrop_lite.Features.Mcp;
 using Inkdrop_lite.Features.Mcp.OAuth;
 using Inkdrop_lite.Features.Notes;
@@ -49,6 +50,14 @@ builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<INotebookService, NotebookService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddSingleton(new AttachmentStorageOptions
+{
+    Root = builder.Configuration["Attachments:Root"]
+        ?? Path.Combine(builder.Environment.ContentRootPath, "data"),
+    MaxBytes = builder.Configuration.GetValue<long?>("Attachments:MaxBytes")
+        ?? AttachmentStorageOptions.DefaultMaxBytes
+});
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 
 // Authentication
 // Tokens are always validated as Entra JWTs. The MCP scheme only decides how a 401 is *challenged*:

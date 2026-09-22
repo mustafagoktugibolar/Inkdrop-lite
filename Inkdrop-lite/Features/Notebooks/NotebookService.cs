@@ -157,13 +157,19 @@ public sealed class NotebookService(AppDbContext context) : INotebookService
                 "The parent notebook does not exist or belongs to another user.");
         }
 
-        if (iconAttachmentId is { } attachmentId &&
-            !await context.Attachments.AnyAsync(
-                attachment => attachment.Id == attachmentId,
-                cancellationToken))
+        if (iconAttachmentId is { } attachmentId)
         {
-            throw new RuleViolationException(
-                "The icon attachment does not exist or belongs to another user.");
+            var contentType = await context.Attachments
+                .Where(attachment => attachment.Id == attachmentId)
+                .Select(attachment => attachment.ContentType)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new RuleViolationException(
+                    "The icon attachment does not exist or belongs to another user.");
+
+            if (!contentType.StartsWith("image/", StringComparison.Ordinal))
+            {
+                throw new RuleViolationException("The icon attachment must be an image.");
+            }
         }
     }
 

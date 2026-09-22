@@ -327,6 +327,44 @@ public sealed class ApiBoundaryTests : IClassFixture<InkdropWebApplicationFactor
     }
 
     [Fact]
+    public async Task Notes_search_endpoint_matches_own_notes_and_hides_other_users_notes()
+    {
+        using var alice = _factory.CreateAuthenticatedClient(userId: "alice");
+        using var bob = _factory.CreateAuthenticatedClient(userId: "bob");
+        var needle = $"needle{Guid.NewGuid():N}";
+        var aliceNotebook = await CreateNotebookAsync(alice);
+        var bobNotebook = await CreateNotebookAsync(bob);
+
+        var aliceNote = await (await alice.PostAsJsonAsync(
+            "/api/notes",
+            new CreateNoteRequest("Alice note", $"body {needle}", NoteStatus.Active, aliceNotebook.Id),
+            CancellationToken.None)).Content.ReadFromJsonAsync<NoteResponse>(CancellationToken.None);
+        await bob.PostAsJsonAsync(
+            "/api/notes",
+            new CreateNoteRequest("Bob note", $"body {needle}", NoteStatus.Active, bobNotebook.Id),
+            CancellationToken.None);
+        Assert.NotNull(aliceNote);
+
+        var aliceHits = await alice.GetFromJsonAsync<NoteSummaryResponse[]>(
+            $"/api/notes/search?query={needle}");
+        var miss = await alice.GetFromJsonAsync<NoteSummaryResponse[]>(
+            $"/api/notes/search?query={needle}&status=Dropped");
+
+        Assert.Equal([aliceNote.Id], aliceHits!.Select(note => note.Id));
+        Assert.Empty(miss!);
+    }
+
+    [Fact]
+    public async Task Notes_search_endpoint_requires_authentication()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/notes/search?query=x");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Users_only_see_and_change_their_own_data()
     {
         using var alice = _factory.CreateAuthenticatedClient(userId: "alice");

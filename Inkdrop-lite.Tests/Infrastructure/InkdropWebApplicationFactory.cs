@@ -15,6 +15,12 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
 
     public const string McpScope = "mcp_access";
 
+    public const int AttachmentMaxBytes = 1024;
+
+    public string AttachmentRoot { get; } = Path.Combine(
+        Path.GetTempPath(),
+        $"inkdrop-tests-attachments-{Guid.NewGuid():N}");
+
     public StubEntraHandler EntraStub { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -25,6 +31,8 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
         // ConfigureAppConfiguration callbacks run, so it must be a host setting.
         builder.UseSetting("ConnectionStrings:Inkdrop-lite", $"Data Source={_databasePath}");
         builder.UseSetting("AzureAd:McpScope", McpScope);
+        builder.UseSetting("Attachments:Root", AttachmentRoot);
+        builder.UseSetting("Attachments:MaxBytes", AttachmentMaxBytes.ToString());
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
@@ -81,6 +89,11 @@ public sealed class InkdropWebApplicationFactory : WebApplicationFactory<Program
         DeleteIfExists(_databasePath);
         DeleteIfExists($"{_databasePath}-shm");
         DeleteIfExists($"{_databasePath}-wal");
+
+        if (Directory.Exists(AttachmentRoot))
+        {
+            Directory.Delete(AttachmentRoot, recursive: true);
+        }
     }
 
     private static void DeleteIfExists(string path)
