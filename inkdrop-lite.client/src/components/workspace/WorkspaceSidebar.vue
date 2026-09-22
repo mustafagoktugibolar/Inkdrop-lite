@@ -19,12 +19,13 @@ import {
   SidebarRightIcon,
   Sun03Icon,
   Tag01Icon,
+  TextFontIcon,
 } from '@hugeicons/core-free-icons'
 
 import type { NotebookResponse } from '@/api/notebooks'
 import { NoteStatus, type NoteResponse } from '@/api/notes'
 import type { TagResponse } from '@/api/tags'
-import type { MobilePane, NavFilter, Theme } from '@/types/workspace'
+import type { Density, MobilePane, NavFilter, Theme } from '@/types/workspace'
 import { buildNotebookRows, notebookAndDescendantIds } from '@/lib/notebookTree'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +42,8 @@ const props = defineProps<{
   activeFilter: NavFilter
   busy: boolean
   collapsed: boolean
+  density: Density
+  densityLabel: string
   mobilePane: MobilePane
   notebooks: NotebookResponse[]
   notes: NoteResponse[]
@@ -57,6 +60,7 @@ const emit = defineEmits<{
   filter: [filter: NavFilter]
   manage: [tab: 'notebooks' | 'tags']
   signOut: []
+  toggleDensity: []
   toggleTheme: []
 }>()
 
@@ -111,6 +115,7 @@ function initials(value: string) {
       </ScrollArea>
       <div class="flex shrink-0 flex-col items-center gap-1 border-t py-2">
         <Button variant="ghost" size="icon-sm" aria-label="Connect to agent" title="Connect to agent" @click="emit('connectAgent')"><HugeiconsIcon :icon="PlugSocketIcon" /></Button>
+        <Button :variant="density === 'compact' ? 'secondary' : 'ghost'" size="icon-sm" :aria-label="densityLabel" :title="densityLabel" @click="emit('toggleDensity')"><HugeiconsIcon :icon="TextFontIcon" /></Button>
         <Button variant="ghost" size="icon-sm" :aria-label="themeLabel" :title="themeLabel" @click="emit('toggleTheme')"><HugeiconsIcon :icon="theme === 'dark' ? Sun03Icon : Moon02Icon" /></Button>
         <Button variant="ghost" size="icon-sm" aria-label="Sign out" title="Sign out" :disabled="busy" @click="emit('signOut')"><HugeiconsIcon :icon="Logout03Icon" /></Button>
       </div>
@@ -146,6 +151,7 @@ function initials(value: string) {
         <Avatar size="sm"><AvatarFallback>{{ initials(accountName) }}</AvatarFallback></Avatar>
         <div class="min-w-0 flex-1"><b class="block truncate text-xs">{{ accountName.split('@')[0] }}</b><span class="block truncate text-[10px] text-muted-foreground">{{ accountName }}</span></div>
         <Button variant="ghost" size="icon-sm" aria-label="Connect to agent" title="Connect to agent" @click="emit('connectAgent')"><HugeiconsIcon :icon="PlugSocketIcon" /></Button>
+        <Button :variant="density === 'compact' ? 'secondary' : 'ghost'" size="icon-sm" :aria-label="densityLabel" :title="densityLabel" @click="emit('toggleDensity')"><HugeiconsIcon :icon="TextFontIcon" /></Button>
         <Button variant="ghost" size="icon-sm" :aria-label="themeLabel" :title="themeLabel" @click="emit('toggleTheme')"><HugeiconsIcon :icon="theme === 'dark' ? Sun03Icon : Moon02Icon" /></Button>
         <Button variant="ghost" size="icon-sm" title="Sign out" :disabled="busy" @click="emit('signOut')"><HugeiconsIcon :icon="Logout03Icon" /></Button>
       </div>

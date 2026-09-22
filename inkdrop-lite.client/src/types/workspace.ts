@@ -8,3 +8,4 @@ export type NavFilter =
 
 export type MobilePane = 'library' | 'notes' | 'editor'
 export type Theme = 'light' | 'dark'
+export type Density = 'comfortable' | 'compact'

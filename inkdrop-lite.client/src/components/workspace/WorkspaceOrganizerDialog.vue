@@ -69,6 +69,10 @@ function onIconChosen(event: Event) {
   if (file) emit('uploadIcon', file)
 }
 
+function updateNotebookOrder(value: string | number) {
+  notebookOrder.value = String(value)
+}
+
 function notebookNoteCount(id: string) {
   return props.notes.filter((note) => note.notebookId === id).length
 }
@@ -90,7 +94,7 @@ function tagNoteCount(id: string) {
               <Field><FieldLabel for="book-name">Name</FieldLabel><Input id="book-name" v-model.trim="notebookName" required maxlength="64" placeholder="Notebook name" /></Field>
               <div class="grid gap-3 sm:grid-cols-[1fr_6rem_1fr]">
                 <Field><FieldLabel>Parent notebook</FieldLabel><Select v-model="notebookParent"><SelectTrigger class="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem :value="ROOT_NOTEBOOK">None (top level)</SelectItem><SelectItem v-for="row in parentChoices" :key="row.book.id" :value="row.book.id">{{ notebookPath(notebooks, row.book.id) }}</SelectItem></SelectGroup></SelectContent></Select></Field>
-                <Field><FieldLabel for="book-order">Order</FieldLabel><Input id="book-order" v-model="notebookOrder" type="number" step="1" placeholder="Auto" /></Field>
+                <Field><FieldLabel for="book-order">Order</FieldLabel><Input id="book-order" :model-value="notebookOrder" type="number" step="1" placeholder="Auto" @update:model-value="updateNotebookOrder" /></Field>
                 <Field><FieldLabel>Icon</FieldLabel><Select v-model="iconTypeModel"><SelectTrigger class="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="None">Default folder</SelectItem><SelectItem value="Svg">Custom SVG</SelectItem><SelectItem value="Attachment">Uploaded image</SelectItem></SelectGroup></SelectContent></Select></Field>
               </div>
               <Field v-if="notebookIconType === 'Svg'"><FieldLabel for="book-svg">SVG markup</FieldLabel><Textarea id="book-svg" v-model="notebookIconSvg" class="min-h-20 font-mono text-xs" maxlength="262144" placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 24 24&quot;>…</svg>" /></Field>

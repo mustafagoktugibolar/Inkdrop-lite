@@ -7,6 +7,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Density scales the rem base so every Tailwind text/space utility (which is rem-based) grows or
+   shrinks together, without touching each component. */
+html[data-density='compact'] { font-size: 15px; }
+html[data-density='comfortable'] { font-size: 18px; }
+
 @theme inline {
     --font-sans: 'Inter Variable', sans-serif;
     --font-heading: var(--font-sans);
@@ -129,7 +134,7 @@
     }
 }
 /* Rendered Markdown preview (NoteEditorPane). Scoped to .markdown-preview; uses the theme tokens. */
-.markdown-preview { font-size: 0.875rem; line-height: 1.65; overflow-wrap: anywhere; }
+.markdown-preview { font-size: 1rem; line-height: 1.75; overflow-wrap: anywhere; }
 .markdown-preview > :first-child { margin-top: 0; }
 .markdown-preview > :last-child { margin-bottom: 0; }
 .markdown-preview h1, .markdown-preview h2, .markdown-preview h3, .markdown-preview h4 { font-weight: 600; line-height: 1.3; margin: 1.4em 0 0.5em; }
@@ -140,6 +145,8 @@
 .markdown-preview ul { list-style: disc; padding-left: 1.5rem; }
 .markdown-preview ol { list-style: decimal; padding-left: 1.5rem; }
 .markdown-preview li + li { margin-top: 0.25em; }
+.markdown-preview li.task-list-item { list-style: none; margin-left: -1.4em; }
+.markdown-preview li.task-list-item input[type="checkbox"] { margin-right: 0.5em; translate: 0 1px; }
 .markdown-preview a { text-decoration: underline; text-underline-offset: 2px; }
 .markdown-preview blockquote { border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
 .markdown-preview code { background: var(--muted); border-radius: 0.25rem; padding: 0.1em 0.35em; font-size: 0.85em; }

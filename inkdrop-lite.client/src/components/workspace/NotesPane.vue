@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Add01Icon, ArrowLeft01Icon, Note01Icon, NoteAddIcon, PinIcon, Robot01Icon, Search01Icon } from '@hugeicons/core-free-icons'
+import { Add01Icon, ArrowLeft01Icon, Copy01Icon, Note01Icon, NoteAddIcon, PinIcon, Robot01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 
 import { NoteStatus, type NoteResponse } from '@/api/notes'
 import type { TagResponse } from '@/api/tags'
@@ -33,6 +33,7 @@ const emit = defineEmits<{
   commitRename: [note: NoteResponse]
   create: []
   openLibrary: []
+  openTemplatePicker: []
   select: [note: NoteResponse]
   startRename: [note: NoteResponse]
 }>()
@@ -59,7 +60,7 @@ function relativeDate(value: string) {
 
 <template>
   <section :class="cn('min-h-0 flex-col border-r bg-card lg:flex', mobilePane === 'notes' ? 'flex' : 'hidden')">
-    <header class="flex h-12 items-center justify-between border-b px-4"><Button class="lg:hidden" variant="ghost" size="icon-sm" @click="emit('openLibrary')"><HugeiconsIcon :icon="ArrowLeft01Icon" /></Button><div class="min-w-0 flex-1"><h2 class="truncate text-sm font-medium">{{ activeFilter.label }}</h2><p class="text-[10px] text-muted-foreground">{{ notes.length }} {{ notes.length === 1 ? 'note' : 'notes' }}</p></div><Button size="icon-sm" aria-label="Create note" :disabled="busy" @click="emit('create')"><HugeiconsIcon :icon="Add01Icon" /></Button></header>
+    <header class="flex h-12 items-center justify-between border-b px-4"><Button class="lg:hidden" variant="ghost" size="icon-sm" @click="emit('openLibrary')"><HugeiconsIcon :icon="ArrowLeft01Icon" /></Button><div class="min-w-0 flex-1"><h2 class="truncate text-sm font-medium">{{ activeFilter.label }}</h2><p class="text-[10px] text-muted-foreground">{{ notes.length }} {{ notes.length === 1 ? 'note' : 'notes' }}</p></div><div class="flex items-center gap-1"><Button variant="ghost" size="icon-sm" aria-label="Start from a template" title="Start from a template" :disabled="busy" @click="emit('openTemplatePicker')"><HugeiconsIcon :icon="Copy01Icon" /></Button><Button size="icon-sm" aria-label="Create note" :disabled="busy" @click="emit('create')"><HugeiconsIcon :icon="Add01Icon" /></Button></div></header>
     <div class="p-3"><InputGroup><InputGroupAddon><HugeiconsIcon :icon="Search01Icon" :size="14" /></InputGroupAddon><InputGroupInput v-model="query" type="search" placeholder="Search notes…" /></InputGroup></div>
     <ScrollArea class="flex-1">
       <div v-if="notes.length" class="flex flex-col">

@@ -15,13 +15,14 @@ import { notebooksApi, type NotebookIconType, type NotebookResponse } from '@/ap
 import { notesApi, NoteStatus, type NoteResponse } from '@/api/notes'
 import { tagsApi, type TagResponse } from '@/api/tags'
 import { getCurrentAccount, initializeAuth, signIn, signOut } from '@/auth/entra'
-import type { MobilePane, NavFilter, Theme } from '@/types/workspace'
+import type { Density, MobilePane, NavFilter, Theme } from '@/types/workspace'
 import { notebookAndDescendantIds, ROOT_NOTEBOOK } from '@/lib/notebookTree'
 
 import LandingView from '@/components/LandingView.vue'
 import ConnectAgentDialog from '@/components/workspace/ConnectAgentDialog.vue'
 import NoteEditorPane from '@/components/workspace/NoteEditorPane.vue'
 import NotesPane from '@/components/workspace/NotesPane.vue'
+import TemplatePickerDialog from '@/components/workspace/TemplatePickerDialog.vue'
 import WorkspaceOrganizerDialog from '@/components/workspace/WorkspaceOrganizerDialog.vue'
 import WorkspaceSidebar from '@/components/workspace/WorkspaceSidebar.vue'
 
@@ -46,6 +47,8 @@ type DeleteTarget =
 
 const storedTheme = localStorage.getItem('inkdrop-lite-theme')
 const theme = ref<Theme>(storedTheme === 'dark' ? 'dark' : 'light')
+const storedDensity = localStorage.getItem('inkdrop-lite-density')
+const density = ref<Density>(storedDensity === 'compact' ? 'compact' : 'comfortable')
 const apiOnline = ref<boolean | null>(null)
 const accountName = ref<string | null>(null)
 const notes = ref<NoteResponse[]>([])
@@ -69,6 +72,7 @@ const activeFilter = ref<NavFilter>({ kind: 'all', label: 'All Notes' })
 const mobilePane = ref<MobilePane>('notes')
 const showManager = ref(false)
 const showConnectAgent = ref(false)
+const showTemplatePicker = ref(false)
 const managerTab = ref<'notebooks' | 'tags'>('notebooks')
 const editingNotebookId = ref<string | null>(null)
 const editingTagId = ref<string | null>(null)
@@ -81,6 +85,7 @@ const deleteDialogOpen = ref(false)
 
 const busy = computed(() => busyCount.value > 0)
 const themeLabel = computed(() => theme.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')
+const densityLabel = computed(() => density.value === 'compact' ? 'Switch to comfortable mode' : 'Switch to compact mode')
 const noteForm = reactive({ title: '', content: '', status: NoteStatus.Active, pinned: false, notebookId: '', tagIds: [] as string[] })
 const notebookForm = reactive({ name: '', parent: ROOT_NOTEBOOK, order: '', iconType: 'None' as NotebookIconType, iconSvg: '', iconAttachmentId: null as string | null })
 const tagForm = reactive({ name: '' })
@@ -140,6 +145,11 @@ watch(theme, (value) => {
   localStorage.setItem('inkdrop-lite-theme', value)
 }, { immediate: true })
 
+watch(density, (value) => {
+  document.documentElement.dataset.density = value
+  localStorage.setItem('inkdrop-lite-density', value)
+}, { immediate: true })
+
 onMounted(async () => execute(async () => {
   await initializeAuth()
   accountName.value = getCurrentAccount()?.username ?? null
@@ -161,6 +171,7 @@ async function loadAll() {
 function setFilter(filter: NavFilter) { activeFilter.value = filter; isNewNote.value = false; mobilePane.value = 'notes' }
 function openManager(tab: 'notebooks' | 'tags') { managerTab.value = tab; showManager.value = true }
 function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark' }
+function toggleDensity() { density.value = density.value === 'compact' ? 'comfortable' : 'compact' }
 function selectNote(note: NoteResponse) {
   selectedNoteId.value = note.id; isNewNote.value = false; templateSourceId.value = null
   Object.assign(noteForm, { title: note.title, content: note.content, status: note.status, pinned: note.pinned, notebookId: note.notebookId, tagIds: [...(note.tagIds ?? [])] })
@@ -356,6 +367,8 @@ async function execute(action: () => Promise<void>, clearError = true) { busyCou
         :notebooks="notebooks"
         :notes="notes"
         :tags="tags"
+        :density="density"
+        :density-label="densityLabel"
         :theme="theme"
         :theme-label="themeLabel"
         @collapse="sidebarCollapsed = true"
@@ -365,6 +378,7 @@ async function execute(action: () => Promise<void>, clearError = true) { busyCou
         @filter="setFilter"
         @manage="openManager"
         @sign-out="disconnect"
+        @toggle-density="toggleDensity"
         @toggle-theme="toggleTheme"
       />
 
@@ -382,6 +396,7 @@ async function execute(action: () => Promise<void>, clearError = true) { busyCou
         @commit-rename="commitRename"
         @create="newNote"
         @open-library="mobilePane = 'library'"
+        @open-template-picker="showTemplatePicker = true"
         @select="selectNote"
         @start-rename="startRename"
       />
@@ -392,6 +407,7 @@ async function execute(action: () => Promise<void>, clearError = true) { busyCou
         v-model:pinned="noteForm.pinned"
         v-model:status="noteForm.status"
         v-model:tag-ids="noteForm.tagIds"
+        v-model:title="noteForm.title"
         :attachments="noteAttachments"
         :busy="busy"
         :fresh="isNewNote"
@@ -441,6 +457,8 @@ async function execute(action: () => Promise<void>, clearError = true) { busyCou
     />
 
     <ConnectAgentDialog v-model:open="showConnectAgent" />
+
+    <TemplatePickerDialog v-model:open="showTemplatePicker" :notebooks="notebooks" :notes="notes" @select="useAsTemplate" />
 
     <AlertDialog v-model:open="deleteDialogOpen"><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete “{{ deleteTargetName() }}”?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. The selected {{ deleteTarget?.kind }} will be permanently removed.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel @click="cancelDelete">Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" @click="confirmDelete">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </main>
